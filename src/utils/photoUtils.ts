@@ -9,8 +9,40 @@ export interface Photo {
   favorite: boolean;
 }
 
-// Local storage key
+export type TierType = "free" | "pro" | "pro-plus";
+
+export interface Tier {
+  name: string;
+  type: TierType;
+  maxPhotos: number;
+  description: string;
+}
+
+// Tier definitions
+export const tiers: Record<TierType, Tier> = {
+  "free": {
+    name: "Free",
+    type: "free",
+    maxPhotos: 2,
+    description: "Basic tier with up to 2 photos"
+  },
+  "pro": {
+    name: "Pro",
+    type: "pro",
+    maxPhotos: 4,
+    description: "Professional tier with up to 4 photos"
+  },
+  "pro-plus": {
+    name: "Pro Plus",
+    type: "pro-plus",
+    maxPhotos: 10,
+    description: "Premium tier with up to 10 photos"
+  }
+};
+
+// Local storage keys
 const STORAGE_KEY = 'shutterbug_photos';
+const TIER_STORAGE_KEY = 'shutterbug_tier';
 
 // Load photos from localStorage
 export const loadPhotos = (): Photo[] => {
@@ -38,6 +70,30 @@ export const savePhotos = (photos: Photo[]): void => {
   } catch (error) {
     console.error('Error saving photos to storage:', error);
     toast.error('Failed to save photos');
+  }
+};
+
+// Load user tier from localStorage
+export const loadUserTier = (): TierType => {
+  try {
+    const savedTier = localStorage.getItem(TIER_STORAGE_KEY);
+    if (savedTier && Object.keys(tiers).includes(savedTier)) {
+      return savedTier as TierType;
+    }
+  } catch (error) {
+    console.error('Error loading tier from storage:', error);
+  }
+  return "free"; // Default to free tier
+};
+
+// Save user tier to localStorage
+export const saveUserTier = (tier: TierType): void => {
+  try {
+    localStorage.setItem(TIER_STORAGE_KEY, tier);
+    toast.success(`Switched to ${tiers[tier].name} tier`);
+  } catch (error) {
+    console.error('Error saving tier to storage:', error);
+    toast.error('Failed to update tier');
   }
 };
 
@@ -111,3 +167,4 @@ export const formatDate = (date: Date): string => {
     day: 'numeric'
   });
 };
+

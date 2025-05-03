@@ -6,13 +6,18 @@ import { toast } from 'sonner';
 
 interface UploadButtonProps {
   onUpload: (files: FileList) => void;
+  disabled?: boolean;
 }
 
-const UploadButton: React.FC<UploadButtonProps> = ({ onUpload }) => {
+const UploadButton: React.FC<UploadButtonProps> = ({ onUpload, disabled = false }) => {
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
   
   const handleUploadClick = () => {
+    if (disabled) {
+      toast.error("You've reached your upload limit. Upgrade your tier to upload more photos.");
+      return;
+    }
     fileInputRef.current?.click();
   };
   
@@ -27,7 +32,9 @@ const UploadButton: React.FC<UploadButtonProps> = ({ onUpload }) => {
 
   const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
-    setIsDragging(true);
+    if (!disabled) {
+      setIsDragging(true);
+    }
   };
 
   const handleDragLeave = () => {
@@ -38,6 +45,11 @@ const UploadButton: React.FC<UploadButtonProps> = ({ onUpload }) => {
     e.preventDefault();
     setIsDragging(false);
     
+    if (disabled) {
+      toast.error("You've reached your upload limit. Upgrade your tier to upload more photos.");
+      return;
+    }
+    
     if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
       onUpload(e.dataTransfer.files);
     } else {
@@ -47,14 +59,15 @@ const UploadButton: React.FC<UploadButtonProps> = ({ onUpload }) => {
   
   return (
     <div
-      className={`w-full p-4 transition-all ${isDragging ? 'bg-blue-50 border-2 border-dashed border-google-blue' : ''}`}
+      className={`w-full p-4 transition-all ${isDragging ? 'bg-blue-50 border-2 border-dashed border-google-blue' : ''} ${disabled ? 'opacity-70' : ''}`}
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
     >
       <Button 
         onClick={handleUploadClick}
-        className="bg-google-blue hover:bg-blue-600 text-white flex gap-2 items-center"
+        className={`bg-google-blue hover:bg-blue-600 text-white flex gap-2 items-center ${disabled ? 'opacity-70 cursor-not-allowed' : ''}`}
+        disabled={disabled}
       >
         <Upload className="w-4 h-4" />
         <span>Upload Photos</span>
@@ -66,6 +79,7 @@ const UploadButton: React.FC<UploadButtonProps> = ({ onUpload }) => {
         multiple
         className="hidden"
         onChange={handleFileChange}
+        disabled={disabled}
       />
       <p className="text-sm text-muted-foreground mt-2">
         Drag and drop photos here or click the upload button
@@ -75,3 +89,4 @@ const UploadButton: React.FC<UploadButtonProps> = ({ onUpload }) => {
 };
 
 export default UploadButton;
+

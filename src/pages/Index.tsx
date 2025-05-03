@@ -4,18 +4,24 @@ import Header from '@/components/Header';
 import PhotoGrid from '@/components/PhotoGrid';
 import UploadButton from '@/components/UploadButton';
 import PhotoModal from '@/components/PhotoModal';
-import { Photo, loadPhotos, addPhoto, deletePhoto, toggleFavorite } from '@/utils/photoUtils';
+import TierDialog from '@/components/TierDialog';
+import { Photo, loadPhotos, addPhoto, deletePhoto, toggleFavorite, loadUserTier, tiers, TierType } from '@/utils/photoUtils';
+import { toast } from 'sonner';
 
 const Index = () => {
   const [photos, setPhotos] = useState<Photo[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedPhoto, setSelectedPhoto] = useState<Photo | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [userTier, setUserTier] = useState<TierType>('free');
   
-  // Load photos on component mount
+  // Load photos and user tier on component mount
   useEffect(() => {
     const savedPhotos = loadPhotos();
     setPhotos(savedPhotos);
+    
+    const savedTier = loadUserTier();
+    setUserTier(savedTier);
   }, []);
   
   // Filter photos based on search query
@@ -23,15 +29,37 @@ const Index = () => {
     photo.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
   
+  // Calculate remaining uploads based on tier
+  const maxPhotos = tiers[userTier].maxPhotos;
+  const remainingUploads = maxPhotos - photos.length;
+  
   // Handle file upload
   const handleFileUpload = async (files: FileList) => {
+    if (remainingUploads <= 0) {
+      toast.error(`You've reached your upload limit (${maxPhotos} photos). Upgrade your tier to upload more.`);
+      return;
+    }
+    
+    // Calculate how many files we can actually upload
+    const numToUpload = Math.min(remainingUploads, files.length);
+    
+    if (numToUpload < files.length) {
+      toast.warning(`Only uploading ${numToUpload} out of ${files.length} photos due to tier limits.`);
+    }
+    
     let updatedPhotos = [...photos];
     
-    for (let i = 0; i < files.length; i++) {
+    // Only process the allowable number of uploads
+    for (let i = 0; i < numToUpload; i++) {
       updatedPhotos = await addPhoto(files[i], updatedPhotos);
     }
     
     setPhotos(updatedPhotos);
+  };
+  
+  // Handle tier change
+  const handleTierChange = (newTier: TierType) => {
+    setUserTier(newTier);
   };
   
   // Handle photo deletion
@@ -94,12 +122,18 @@ const Index = () => {
       <Header searchQuery={searchQuery} onSearchChange={setSearchQuery} />
       
       <main className="flex-grow flex flex-col">
-        <UploadButton onUpload={handleFileUpload} />
+        <div className="bg-white p-4 flex justify-between items-center border-b">
+          <TierDialog currentTier={userTier} onTierChange={handleTierChange} />
+          <UploadButton onUpload={handleFileUpload} disabled={remainingUploads <= 0} />
+        </div>
+        
         <PhotoGrid 
           photos={filteredPhotos}
           onPhotoClick={handlePhotoClick}
           onDelete={handleDelete}
           onToggleFavorite={handleToggleFavorite}
+          remainingUploads={remainingUploads}
+          tierLimit={maxPhotos}
         />
       </main>
       
@@ -118,3 +152,4 @@ const Index = () => {
 };
 
 export default Index;
+
